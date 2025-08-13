@@ -1,6 +1,7 @@
 package com.example.jetnotes.viewmodel
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +25,14 @@ class NotesViewModel @Inject constructor(
     private val _descText = mutableStateOf("")
     val descText: State<String> = _descText
 
+    private val _progress = mutableIntStateOf(0)
+
+    val progress: State<Int> = _progress
+
+    private val _hexColor = mutableStateOf<String?>(null)
+
+    val hexColor: State<String?> = _hexColor
+
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage
 
@@ -33,7 +42,17 @@ class NotesViewModel @Inject constructor(
     private val _showDialog = mutableStateOf<Int?>(null)
     val showDialog: State<Int?> = _showDialog
 
+    private val _deletionDialog = mutableStateOf<Int?>(null)
+    val deletionDialog: State<Int?> = _deletionDialog
+
     val allNotes: Flow<List<Note>> = dao.fetchNotes()
+
+    fun setData(titleText: String, descText: String, progress: Int, hexColor: String? = null) {
+        _titleText.value = titleText
+        _descText.value = descText
+        _progress.value = progress
+        _hexColor.value = hexColor
+    }
 
     fun setTitleText(titleText: String) {
         _titleText.value = titleText
@@ -43,12 +62,16 @@ class NotesViewModel @Inject constructor(
         _descText.value = descText
     }
 
-    fun cardClickable(state: Boolean) {
+    fun setCardClickable(state: Boolean) {
         _cardClickable.value = state
     }
 
-    fun showDialog(noteID: Int?) {
+    fun setShowDialog(noteID: Int?) {
         _showDialog.value = noteID
+    }
+
+    fun setDeletionDialog(noteID: Int?) {
+        _deletionDialog.value = noteID
     }
 
     fun saveProgress(
@@ -57,16 +80,23 @@ class NotesViewModel @Inject constructor(
         newColor: String
     ) {
         viewModelScope.launch {
-            dao.insert(
-                Note(
-                    id = note.id,
-                    title = note.title,
-                    desc = note.desc,
-                    progress = newProgress,
-                    color = "#$newColor"
-                )
+            insertIntoDatabase(
+                noteID = note.id,
+                title = note.title,
+                desc = note.desc,
+                progress = newProgress,
+                color = "#$newColor"
             )
-            showDialog(null)
+//            dao.insert(
+//                Note(
+//                    id = note.id,
+//                    title = note.title,
+//                    desc = note.desc,
+//                    progress = newProgress,
+//                    color = "#$newColor"
+//                )
+//            )
+            setShowDialog(null)
         }
     }
 
@@ -85,21 +115,38 @@ class NotesViewModel @Inject constructor(
             else -> {
                 viewModelScope.launch {
                     if (id != null) {
-                        dao.insert(
-                            Note(
-                                id = id,
-                                title = _titleText.value,
-                                desc = _descText.value
-                            )
+                        insertIntoDatabase(
+                            noteID = id,
+                            title = _titleText.value,
+                            desc = _descText.value,
+                            progress = _progress.value,
+                            color = _hexColor.value
                         )
+//                        dao.insert(
+//                            Note(
+//                                id = id,
+//                                title = _titleText.value,
+//                                desc = _descText.value
+//                            )
+//                        )
                     } else {
-                        dao.insert(Note(title = _titleText.value, desc = _descText.value))
+                        insertIntoDatabase(
+                            title = _titleText.value,
+                            desc = _descText.value,
+                        )
+//                        dao.insert(Note(title = _titleText.value, desc = _descText.value))
                     }
 
                     onSuccess()
                     clearDataFromViewModel()
                 }
             }
+        }
+    }
+
+    fun deleteData(noteID: Int) {
+        viewModelScope.launch {
+            dao.delete(noteID)
         }
     }
 
@@ -110,5 +157,34 @@ class NotesViewModel @Inject constructor(
     fun clearDataFromViewModel() {
         _titleText.value = ""
         _descText.value = ""
+    }
+
+    suspend fun insertIntoDatabase(
+        noteID: Int? = null,
+        title: String,
+        desc: String,
+        progress: Int = 0,
+        color: String? = null
+    ) {
+
+        if (noteID != null) { // If Note already exists
+            dao.insert(
+                Note(
+                    id = noteID,
+                    title = title,
+                    desc = desc,
+                    progress = progress,
+                    color = color
+                )
+            )
+        } else { // if a new note is going to be created
+            dao.insert(
+                Note(
+                    title = title,
+                    desc = desc,
+                )
+            )
+        }
+
     }
 }

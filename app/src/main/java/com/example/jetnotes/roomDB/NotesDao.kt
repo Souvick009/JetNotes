@@ -14,8 +14,8 @@ interface NotesDao {
     @Upsert
     suspend fun insert(note: Note)
 
-    @Delete
-    suspend fun delete(note: Note)
+    @Query(value = "Delete FROM NOTE WHERE id = :noteID")
+    suspend fun delete(noteID: Int)
 
     @Query(value = "SELECT * FROM NOTE")
     fun fetchNotes() : Flow<List<Note>>

@@ -43,7 +43,9 @@ fun navController() {
                 viewModel = viewModel,
                 noteID = noteDTO.id,
                 title = noteDTO.title,
-                desc = noteDTO.desc
+                desc = noteDTO.desc,
+                progress = noteDTO.progress,
+                color = noteDTO.color
             )
         }
     }

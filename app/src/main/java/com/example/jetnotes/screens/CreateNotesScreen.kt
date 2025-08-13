@@ -1,6 +1,7 @@
 package com.example.jetnotes.screens
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,8 +38,10 @@ fun createNotesScreen(
     navController: NavHostController,
     viewModel: NotesViewModel,
     noteID: Int? = null,
-    title: String? = null,
-    desc: String? = null
+    title: String,
+    desc: String,
+    progress: Int,
+    color: String? = null
 ) {
 
     val context = LocalContext.current
@@ -53,11 +56,21 @@ fun createNotesScreen(
 
     LaunchedEffect(noteID, title, desc) {
         noteID?.let {
-            if (title != null && desc != null) {
-                viewModel.setTitleText(title)
-                viewModel.setDescText(desc)
-            }
+            viewModel.setData(
+                titleText = title,
+                descText = desc,
+                progress = progress,
+                hexColor = color,
+            )
         }
+    }
+
+    BackHandler {
+        if (noteID != null) {
+            viewModel.clearDataFromViewModel()
+        }
+        navController.popBackStack()
+        viewModel.setCardClickable(true)
     }
 
     Scaffold(
@@ -72,7 +85,7 @@ fun createNotesScreen(
                             viewModel.clearDataFromViewModel()
                         }
                         navController.popBackStack()
-                        viewModel.cardClickable(true)
+                        viewModel.setCardClickable(true)
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -86,7 +99,7 @@ fun createNotesScreen(
                             id = noteID
                         ) {
                             navController.popBackStack()
-                            viewModel.cardClickable(true)
+                            viewModel.setCardClickable(true)
                         }
                     }) {
                         Icon(

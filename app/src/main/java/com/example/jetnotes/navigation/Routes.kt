@@ -8,6 +8,8 @@ object HomeScreenRoute
 @Serializable
 data class CreateNoteScreenRoute(
     val id: Int? = null,
-    val title: String? = null,
-    val desc: String? = null
+    val title: String,
+    val desc: String,
+    val progress: Int = 0,
+    val color: String? = null
 )

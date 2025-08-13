@@ -1,5 +1,6 @@
 package com.example.jetnotes.fragments
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -25,38 +25,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
+import com.github.skydoves.colorpicker.compose.AlphaSlider
 import com.github.skydoves.colorpicker.compose.ColorEnvelope
 import com.github.skydoves.colorpicker.compose.ColorPickerController
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
-import com.github.skydoves.colorpicker.compose.rememberColorPickerController
-
-@Preview
-@Composable
-private fun CardDialogFragmentPreview() {
-    NoteAlertDialog(
-        initialProgressValue = 0.5f,
-        hsvController = rememberColorPickerController(),
-        onApply = {} as (Float, ColorEnvelope) -> Unit,
-        onCancel = {}
-    )
-}
 
 @Composable
 fun NoteAlertDialog(
+    colorPickerController: ColorPickerController,
     initialProgressValue: Float,
-    hsvController: ColorPickerController,
-    initialColor: Color? = null,
+    initialColorInt: Int? = null,
     onApply: (Float, ColorEnvelope) -> Unit,
     onCancel: () -> Unit
 ) {
+    var firstCompose = true
+
+    val initialColor = initialColorInt?.let {
+        Color(initialColorInt)
+    } ?: Color.LightGray
     val sliderState = rememberSaveable { mutableFloatStateOf(initialProgressValue) }
-    var _colorEnvelope by remember { mutableStateOf(ColorEnvelope(Color.Gray, "#FF888888", false)) }
+    val initialHex = initialColorInt?.toHexString() ?: "#FFFFFFFF"
+
+    var _colorEnvelope by remember {
+        mutableStateOf(ColorEnvelope(initialColor, initialHex, false))
+    }
+
     var hexCode by remember {
-        mutableStateOf(_colorEnvelope.hexCode?.let { "#$it" } ?: "#FF888888")
+        mutableStateOf(_colorEnvelope.hexCode)
     }
     var isError by rememberSaveable { mutableStateOf(false) }
     var supportingText by rememberSaveable { mutableStateOf("") }
@@ -84,20 +82,32 @@ fun NoteAlertDialog(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 HsvColorPicker(
-                    controller = hsvController,
+                    controller = colorPickerController,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp),
                     onColorChanged = {
-                        _colorEnvelope = it
-                        hexCode = "#${it.hexCode}"
+                        if (!firstCompose) {
+                            _colorEnvelope = it
+                            hexCode = "#${it.hexCode}"
+                        }
+                        firstCompose = false
                     },
                     initialColor = initialColor
                 )
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(18.dp))
+                AlphaSlider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp),
+                    controller = colorPickerController,
+                )
+                Spacer(modifier = Modifier.height(25.dp))
                 Row {
                     OutlinedTextField(
-                        modifier = Modifier.weight(1F).fillMaxWidth(),
+                        modifier = Modifier
+                            .weight(1F)
+                            .fillMaxWidth(),
                         value = hexCode,
                         onValueChange = {
                             hexCode = it
@@ -106,7 +116,7 @@ fun NoteAlertDialog(
                             if (cleanedHex.length == 6 || cleanedHex.length == 8) {
                                 try {
                                     val parsedColor = Color("#$cleanedHex".toColorInt())
-                                    hsvController.selectByColor(parsedColor, true)
+                                    colorPickerController.selectByColor(parsedColor, true)
                                     isError = false
                                     supportingText = ""
                                 } catch (_: IllegalArgumentException) {
@@ -129,8 +139,12 @@ fun NoteAlertDialog(
                                 null
                         }
                     )
-
-                    Box(modifier = Modifier.padding(16.dp).size(40.dp).background(_colorEnvelope.color))
+                    Box(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .size(40.dp)
+                            .background(_colorEnvelope.color)
+                    )
                 }
 
             }
